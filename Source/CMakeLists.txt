@@ -1186,30 +1186,49 @@ endif()
 configure_file(CPack/cmCPackConfigure.h.in CPack/cmCPackConfigure.h)
 
 
+if(NOT ${IOS} MATCHES "1")
+  # Build CMake executable
+  add_executable(cmake cmakemain.cxx cmcmd.cxx cmcmd.h)
+
+  # Build CTest executable
+  add_executable(ctest ctest.cxx)
+
+  # Build CPack executable
+  add_executable(cpack CPack/cpack.cxx)
+else()
+  # Build CMake framework
+  add_library(cmake SHARED cmakemain.cxx cmcmd.cxx cmcmd.h)
+  
+  # Build CTest framework
+  add_library(ctest SHARED ctest.cxx)
+  
+  # Build CPack framework
+  add_library(cpack SHARED CPack/cpack.cxx)
+endif()
+
 # Build CMake executable
-add_executable(cmake cmakemain.cxx cmcmd.cxx cmcmd.h)
 target_link_libraries(cmake PRIVATE CMakeLib ManifestLib)
 list(APPEND _tools cmake)
-
+    
 # Build CTest executable
-add_executable(ctest ctest.cxx)
 target_link_libraries(ctest PRIVATE CTestLib ManifestLib)
 list(APPEND _tools ctest)
-
+  
 # Build CPack executable
-add_executable(cpack CPack/cpack.cxx)
 target_link_libraries(cpack PRIVATE CPackLib ManifestLib)
 list(APPEND _tools cpack)
 
-# Curses GUI
-if(BUILD_CursesDialog)
-  add_subdirectory(CursesDialog)
-endif()
+if(${IOS} MATCHES "1")
+  # Curses GUI
+  if(BUILD_CursesDialog)
+    add_subdirectory(CursesDialog)
+  endif()
 
-# Qt GUI
-option(BUILD_QtDialog "Build Qt dialog for CMake" FALSE)
-if(BUILD_QtDialog)
-  add_subdirectory(QtDialog)
+  # Qt GUI
+  option(BUILD_QtDialog "Build Qt dialog for CMake" FALSE)
+  if(BUILD_QtDialog)
+    add_subdirectory(QtDialog)
+  endif()
 endif()
 
 include(${CMAKE_CURRENT_BINARY_DIR}/LocalUserOptions.cmake OPTIONAL)

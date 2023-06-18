@@ -591,7 +591,7 @@ int cmCPackDragNDropGenerator::CreateDMG(const std::string& src_dir,
                            kCFStringEncodingMacRoman);
         LangCode lang = 0;
         RegionCode region = 0;
-#if HAVE_CoreServices
+#if HAVE_CoreServices && !defined(TARGET_OS_IPHONE)
         OSStatus err =
           LocaleStringToLangAndRegionCodes(iso_language_cstr, &lang, &region);
         if (err != noErr)

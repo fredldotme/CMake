@@ -270,8 +270,10 @@ if(BUILD_TESTING)
   if(NOT DEFINED CMake_TEST_Qt5)
     set(CMake_TEST_Qt5 1)
   endif()
-  if(CMake_TEST_Qt5)
-    find_package(Qt5Widgets QUIET NO_MODULE)
+  if(NOT ${IOS} MATCHES "1")
+    if(CMake_TEST_Qt5)
+      find_package(Qt5Widgets QUIET NO_MODULE)
+    endif()
   endif()
 
   # Collect a list of all test build directories.

@@ -341,7 +341,7 @@ endif()
 #---------------------------------------------------------------------
 # Use curses?
 if(NOT DEFINED BUILD_CursesDialog)
-  if(UNIX)
+  if(UNIX AND NOT IOS)
     include(${CMake_SOURCE_DIR}/Source/Checks/Curses.cmake)
     set(BUILD_CursesDialog_DEFAULT "${CMakeCheckCurses_COMPILED}")
   elseif(WIN32)
