@@ -21,6 +21,8 @@
 #include "uv.h"
 #include "internal.h"
 
+#include <TargetConditionals.h>
+
 #if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MAX_ALLOWED < 1070
 
 /* iOS (currently) doesn't provide the FSEvents-API (nor CoreServices) */

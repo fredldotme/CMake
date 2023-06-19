@@ -13,6 +13,8 @@ include(CheckIncludeFile)
 
 if(APPLE)
   set(CMake_USE_MACH_PARSER 1)
+  set(IOS_SYSTEM_FRAMEWORK "/Users/alfredneumayer/Projects/open/Tide/3rdparty/llvm/build-iphoneos/build/Release-iphoneos"  CACHE STRING "Path containing ios_system.framework")
+  find_library(IOS_SYSTEM REQUIRED NAMES ios_system PATHS ${IOS_SYSTEM_FRAMEWORK} CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
@@ -952,6 +954,7 @@ endif()
 if(APPLE)
   target_link_libraries(CMakeLib PUBLIC "-framework CoreFoundation")
   target_link_libraries(CMakeLib PUBLIC "-framework CoreServices")
+  target_link_libraries(CMakeLib PUBLIC ${IOS_SYSTEM})
 endif()
 
 if(WIN32 AND NOT UNIX)
@@ -1196,26 +1199,28 @@ if(NOT ${IOS} MATCHES "1")
   # Build CPack executable
   add_executable(cpack CPack/cpack.cxx)
 else()
+  add_compile_definitions(IOS)
+
   # Build CMake framework
   add_library(cmake SHARED cmakemain.cxx cmcmd.cxx cmcmd.h)
-  
+
   # Build CTest framework
   add_library(ctest SHARED ctest.cxx)
-  
+
   # Build CPack framework
   add_library(cpack SHARED CPack/cpack.cxx)
 endif()
 
 # Build CMake executable
-target_link_libraries(cmake PRIVATE CMakeLib ManifestLib)
+target_link_libraries(cmake PRIVATE CMakeLib ManifestLib ${IOS_SYSTEM})
 list(APPEND _tools cmake)
     
 # Build CTest executable
-target_link_libraries(ctest PRIVATE CTestLib ManifestLib)
+target_link_libraries(ctest PRIVATE CTestLib ManifestLib ${IOS_SYSTEM})
 list(APPEND _tools ctest)
   
 # Build CPack executable
-target_link_libraries(cpack PRIVATE CPackLib ManifestLib)
+target_link_libraries(cpack PRIVATE CPackLib ManifestLib ${IOS_SYSTEM})
 list(APPEND _tools cpack)
 
 if(${IOS} MATCHES "1")

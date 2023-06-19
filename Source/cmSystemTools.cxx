@@ -2655,6 +2655,12 @@ void cmSystemTools::FindCMakeResources(const char* argv0)
       cmSystemToolsHTMLDoc = cmStrCat(prefix, CMAKE_DOC_DIR "/html");
     }
   }
+  if (cmSystemToolsCMakeRoot.empty()) {
+    const char* envvar = getenv("CMAKE_ROOT");
+    if (envvar) {
+      cmSystemToolsCMakeRoot = envvar;
+    }
+  }
   if (cmSystemToolsCMakeRoot.empty() ||
       !cmSystemTools::FileExists(
         cmStrCat(cmSystemToolsCMakeRoot, "/Modules/CMake.cmake"))) {

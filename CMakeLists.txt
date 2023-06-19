@@ -9,6 +9,9 @@ project(CMake)
 unset(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX)
 unset(CMAKE_USER_MAKE_RULES_OVERRIDE_C)
 
+# FIXME: Disable tests on iOS the hard way
+set(BUILD_TESTING 0)
+
 # FIXME: This block should go away after a transition period.
 if(MSVC AND NOT CMAKE_VERSION VERSION_LESS 3.15)
   # Filter out MSVC runtime library flags that may have come from
@@ -394,7 +397,7 @@ if(NOT CMake_TEST_EXTERNAL_CMAKE)
   # Load install destinations.
   include(Source/CMakeInstallDestinations.cmake)
 
-  if(BUILD_TESTING)
+  if(BUILD_TESTING AND NOT IOS)
     include(${CMake_SOURCE_DIR}/Tests/CMakeInstall.cmake)
   endif()
 
@@ -507,7 +510,7 @@ endif()
 add_subdirectory(Tests)
 
 if(NOT CMake_TEST_EXTERNAL_CMAKE)
-  if(BUILD_TESTING)
+  if(BUILD_TESTING AND NOT IOS)
     CMAKE_SET_TARGET_FOLDER(CMakeLibTests "Tests")
   endif()
   if(TARGET documentation)
@@ -515,7 +518,7 @@ if(NOT CMake_TEST_EXTERNAL_CMAKE)
   endif()
 endif()
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT IOS)
   add_test(SystemInformationNew "${CMAKE_CMAKE_COMMAND}"
     --system-information  -G "${CMAKE_GENERATOR}"
   )

@@ -70,7 +70,7 @@ int uv__io_fork(uv_loop_t* loop) {
   if (err)
     return err;
 
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070 && !defined(TARGET_OS_IPHONE)
   if (loop->cf_state != NULL) {
     /* We cannot start another CFRunloop and/or thread in the child
        process; CF aborts if you try or if you try to touch the thread
@@ -534,7 +534,7 @@ int uv_fs_event_start(uv_fs_event_t* handle,
     return UV__ERR(errno);
   }
 
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070 && !defined(TARGET_OS_IPHONE)
   /* Nullify field to perform checks later */
   handle->cf_cb = NULL;
   handle->realpath = NULL;
@@ -581,7 +581,7 @@ int uv_fs_event_stop(uv_fs_event_t* handle) {
 
   uv__handle_stop(handle);
 
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070 && !defined(TARGET_OS_IPHONE)
   if (0 == uv__load_relaxed(&uv__has_forked_with_cfrunloop))
     if (handle->cf_cb != NULL)
       r = uv__fsevents_close(handle);

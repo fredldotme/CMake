@@ -51,6 +51,14 @@ do.
 #  define _DARWIN_UNLIMITED_SELECT
 #  include <limits.h> /* OPEN_MAX */
 #  define FD_SETSIZE OPEN_MAX
+#  include <TargetConditionals.h>
+#  ifdef TARGET_OS_IPHONE
+#    include <sys/types.h>
+     extern pid_t ios_fork(void);
+#    define fork ios_fork
+     extern void ios_waitpid(pid_t pid);
+     extern int ios_system(const char* inputCmd);
+#  endif
 #endif
 
 #include <assert.h>    /* assert */
@@ -1469,8 +1477,12 @@ void kwsysProcess_Kill(kwsysProcess* cp)
 
       /* Reap the child.  Keep trying until the call is not
          interrupted.  */
+#ifndef TARGET_OS_IPHONE
       while ((waitpid(cp->ForkPIDs[i], &status, 0) < 0) && (errno == EINTR)) {
       }
+#else
+      ios_waitpid(cp->ForkPIDs[i]);
+#endif
     }
   }
 
@@ -1607,11 +1619,15 @@ static void kwsysProcessCleanup(kwsysProcess* cp, int error)
           /* Kill the child.  */
           kwsysProcessKill(cp->ForkPIDs[i]);
 
+#ifndef TARGET_OS_IPHONE
           /* Reap the child.  Keep trying until the call is not
              interrupted.  */
           while ((waitpid(cp->ForkPIDs[i], &status, 0) < 0) &&
                  (errno == EINTR)) {
           }
+#else
+          ios_waitpid(cp->ForkPIDs[i]);
+#endif
         }
       }
     }
@@ -1816,6 +1832,7 @@ static int kwsysProcessCreate(kwsysProcess* cp, int prIndex,
     }
 #endif
 
+#ifndef TARGET_OS_IPHONE
     /* Execute the real process.  If successful, this does not return.  */
     execvp(cp->Commands[prIndex][0], cp->Commands[prIndex]);
     /* TODO: What does VMS do if the child fails to start?  */
@@ -1823,6 +1840,18 @@ static int kwsysProcessCreate(kwsysProcess* cp, int prIndex,
 
     /* Failure.  Report error to parent and terminate.  */
     kwsysProcessChildErrorExit(si->ErrorPipe[1]);
+#else
+    const int cmdSize = sizeof(cp->Commands[prIndex])/sizeof(*cp->Commands[prIndex]);
+    char* actualCommands = (char*)malloc(ARG_MAX);
+    memset(actualCommands, '\0', ARG_MAX);
+    for (int i = 0; i < cmdSize; i++) {
+      memset(actualCommands + i, (int)' ', 1);
+      strcpy(actualCommands + i + 1, cp->Commands[prIndex][i]);
+    }
+    printf("RUN: %s\n", actualCommands);
+    ios_system(actualCommands);
+    free(actualCommands);
+#endif
   }
 
 #if defined(__VMS)
@@ -1905,10 +1934,15 @@ static void kwsysProcessDestroy(kwsysProcess* cp)
   for (i = 0; i < cp->NumberOfCommands; ++i) {
     if (cp->ForkPIDs[i]) {
       int result;
+#ifndef TARGET_OS_IPHONE
       while (((result = waitpid(cp->ForkPIDs[i], &cp->CommandExitCodes[i],
                                 WNOHANG)) < 0) &&
              (errno == EINTR)) {
       }
+#else
+      ios_waitpid(cp->ForkPIDs[i]);
+      result = 1;
+#endif
       if (result > 0) {
         /* This child has terminated.  */
         cp->ForkPIDs[i] = 0;
@@ -2486,8 +2520,12 @@ static pid_t kwsysProcessFork(kwsysProcess* cp,
     }
 
     /* Wait for the intermediate process to exit and clean it up.  */
+#ifndef TARGET_OS_IPHONE
     while ((waitpid(middle_pid, &status, 0) < 0) && (errno == EINTR)) {
     }
+#else
+    ios_waitpid(middle_pid);
+#endif
     return child_pid;
   }
   /* Not creating a detached process.  Use normal fork.  */
@@ -2529,8 +2567,10 @@ static void kwsysProcessKill(pid_t process_id)
   DIR* procdir;
 #endif
 
+#ifndef TARGET_OS_IPHONE
   /* Suspend the process to be sure it will not create more children.  */
   kill(process_id, SIGSTOP);
+#endif
 
 #if defined(__CYGWIN__)
   /* Some Cygwin versions seem to need help here.  Give up our time slice

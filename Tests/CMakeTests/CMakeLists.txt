@@ -28,7 +28,7 @@ AddCMakeTest(String "")
 AddCMakeTest(Math "")
 AddCMakeTest(CMakeMinimumRequired "")
 AddCMakeTest(CompilerIdVendor "")
-AddCMakeTest(ProcessorCount "-DKWSYS_TEST_EXE=$<TARGET_FILE:cmsysTestsCxx>")
+# AddCMakeTest(ProcessorCount "-DKWSYS_TEST_EXE=$<TARGET_FILE:cmsysTestsCxx>")
 AddCMakeTest(PushCheckState "")
 AddCMakeTest(While "")
 

@@ -98,6 +98,11 @@ if (APPLE)
   endif ()
   set(KWSYS_LAST_OSX_DEPLOYMENT_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}"
     CACHE INTERNAL "remember the last deployment target to trigger configure rechecks")
+
+  if(IOS)
+    set(IOS_SYSTEM_FRAMEWORK "/Users/alfredneumayer/Projects/open/Tide/3rdparty/llvm/build-iphoneos/build/Release-iphoneos" CACHE STRING "Path containing ios_system.framework")
+    find_library(IOS_SYSTEM REQUIRED NAMES ios_system PATHS ${IOS_SYSTEM_FRAMEWORK} CMAKE_FIND_ROOT_PATH_BOTH)
+  endif()
 endif ()
 
 #-----------------------------------------------------------------------------
@@ -836,6 +841,11 @@ if(KWSYS_C_SRCS OR KWSYS_CXX_SRCS)
     endif()
   endif()
 
+  # Link against ios_system
+  if(IOS)
+    target_link_libraries(${KWSYS_TARGET_INTERFACE} INTERFACE ${IOS_SYSTEM})
+  endif()
+
   # Create an install target for the library.
   if(KWSYS_INSTALL_LIBRARY_RULE)
     install(TARGETS ${KWSYS_TARGET_INSTALL} ${KWSYS_INSTALL_LIBRARY_RULE})
@@ -934,7 +944,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Setup testing if not being built as part of another project.
 if(KWSYS_STANDALONE OR CMake_SOURCE_DIR)
-  if(BUILD_TESTING)
+  if(BUILD_TESTING AND IOS)
     # Compute the location of executables.
     set(EXEC_DIR "${CMAKE_CURRENT_BINARY_DIR}")
     if(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
@@ -1089,7 +1099,7 @@ if(KWSYS_STANDALONE OR CMake_SOURCE_DIR)
     # Process tests.
     add_executable(${KWSYS_NAMESPACE}TestProcess testProcess.c)
     set_property(TARGET ${KWSYS_NAMESPACE}TestProcess PROPERTY LABELS ${KWSYS_LABELS_EXE})
-    target_link_libraries(${KWSYS_NAMESPACE}TestProcess ${KWSYS_TARGET_C_LINK})
+    target_link_libraries(${KWSYS_NAMESPACE}TestProcess ${KWSYS_TARGET_C_LINK} ${IOS_SYSTEM})
     #set(KWSYS_TEST_PROCESS_7 7) # uncomment to run timing-sensitive test locally
     foreach(n 1 2 3 4 5 6 ${KWSYS_TEST_PROCESS_7} 9 10)
       add_test(kwsys.testProcess-${n} ${EXEC_DIR}/${KWSYS_NAMESPACE}TestProcess ${n})

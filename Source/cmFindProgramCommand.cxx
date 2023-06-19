@@ -19,6 +19,11 @@ class cmExecutionStatus;
 
 #if defined(__APPLE__)
 #  include <CoreFoundation/CoreFoundation.h>
+#  ifdef TARGET_OS_IPHONE
+     extern "C" {
+       extern int ios_executable(const char* inputCmd); 
+     }
+#  endif
 #endif
 
 struct cmFindProgramHelper
@@ -214,6 +219,7 @@ std::string cmFindProgramCommand::FindProgram()
 {
   std::string program;
 
+#ifndef TARGET_OS_IPHONE
   if (this->SearchAppBundleFirst || this->SearchAppBundleOnly) {
     program = this->FindAppBundle();
   }
@@ -224,6 +230,15 @@ std::string cmFindProgramCommand::FindProgram()
   if (program.empty() && this->SearchAppBundleLast) {
     program = this->FindAppBundle();
   }
+#else
+  for (std::string const& name : this->Names) {
+    if(ios_executable(name.c_str())) {
+      program = name;
+      break;
+    }
+  }
+#endif
+
   return program;
 }
 

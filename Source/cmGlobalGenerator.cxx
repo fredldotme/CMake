@@ -441,6 +441,7 @@ bool cmGlobalGenerator::IsExportedTargetsFile(
 // Find the make program for the generator, required for try compiles
 bool cmGlobalGenerator::FindMakeProgram(cmMakefile* mf)
 {
+#ifndef TARGET_OS_IPHONE
   if (this->FindMakeProgramFile.empty()) {
     cmSystemTools::Error(
       "Generator implementation error, "
@@ -478,6 +479,12 @@ bool cmGlobalGenerator::FindMakeProgram(cmMakefile* mf)
                            cmStateEnums::FILEPATH);
   }
   return true;
+#else
+  // Only support Ninja on iOS
+  mf->AddCacheDefinition("CMAKE_MAKE_PROGRAM", "ninja", "make program",
+                         cmStateEnums::FILEPATH);
+  return true;
+#endif
 }
 
 bool cmGlobalGenerator::CheckLanguages(

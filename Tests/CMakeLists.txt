@@ -370,7 +370,7 @@ if(BUILD_TESTING)
     set(CMAKE_LONG_TEST_TIMEOUT 1500)
   endif()
 
-  if(NOT CMake_TEST_EXTERNAL_CMAKE)
+  if(NOT CMake_TEST_EXTERNAL_CMAKE AND NOT IOS)
     add_subdirectory(CMakeLib)
   endif()
   add_subdirectory(CMakeOnly)

@@ -10,6 +10,10 @@ endif()
 
 find_package(Threads)
 
+if(IOS)
+  add_compile_definitions(TARGET_OS_IPHONE)
+endif()
+
 set(uv_libraries ${CMAKE_THREAD_LIBS_INIT})
 set(uv_includes include src)
 set(uv_headers
