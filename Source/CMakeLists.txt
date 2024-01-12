@@ -13,8 +13,9 @@ include(CheckIncludeFile)
 
 if(APPLE)
   set(CMake_USE_MACH_PARSER 1)
-  set(IOS_SYSTEM_FRAMEWORK "/Users/alfredneumayer/Projects/open/Tide/3rdparty/llvm/build-iphoneos/build/Release-iphoneos"  CACHE STRING "Path containing ios_system.framework")
-  find_library(IOS_SYSTEM REQUIRED NAMES ios_system PATHS ${IOS_SYSTEM_FRAMEWORK} CMAKE_FIND_ROOT_PATH_BOTH)
+  set(IOS_SYSTEM_FRAMEWORK "" CACHE STRING "Path containing nosystem.framework")
+  message("${IOS_SYSTEM_FRAMEWORK}")
+  find_library(IOS_SYSTEM REQUIRED NAMES nosystem PATHS ${IOS_SYSTEM_FRAMEWORK} CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
@@ -765,6 +766,7 @@ target_link_libraries(
     LibUV::LibUV
     Threads::Threads
     ZLIB::ZLIB
+    ${IOS_SYSTEM}
   )
 
 if(CMake_ENABLE_DEBUGGER)
@@ -1203,12 +1205,39 @@ else()
 
   # Build CMake framework
   add_library(cmake SHARED cmakemain.cxx cmcmd.cxx cmcmd.h)
+  set_target_properties(cmake PROPERTIES
+        FRAMEWORK TRUE
+        MACOSX_FRAMEWORK_IDENTIFIER me.fredl.cmake
+        MACOSX_FRAMEWORK_BUNDLE_VERSION 1.0.0
+        MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.0
+        MACOSX_BUNDLE_BUNDLE_VERSION 1.0.0
+        MACOSX_BUNDLE_SHORT_VERSION_STRING 1.0
+        XCODE_ATTRIBUTE_SKIP_INSTALL "Yes"
+  )
 
   # Build CTest framework
   add_library(ctest SHARED ctest.cxx)
+  set_target_properties(ctest PROPERTIES
+        FRAMEWORK TRUE
+        MACOSX_FRAMEWORK_IDENTIFIER me.fredl.ctest
+        MACOSX_FRAMEWORK_BUNDLE_VERSION 1.0.0
+        MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.0
+        MACOSX_BUNDLE_BUNDLE_VERSION 1.0.0
+        MACOSX_BUNDLE_SHORT_VERSION_STRING 1.0
+        XCODE_ATTRIBUTE_SKIP_INSTALL "Yes"
+  )
 
   # Build CPack framework
   add_library(cpack SHARED CPack/cpack.cxx)
+  set_target_properties(cpack PROPERTIES
+        FRAMEWORK TRUE
+        MACOSX_FRAMEWORK_IDENTIFIER me.fredl.cpack
+        MACOSX_FRAMEWORK_BUNDLE_VERSION 1.0.0
+        MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.0
+        MACOSX_BUNDLE_BUNDLE_VERSION 1.0.0
+        MACOSX_BUNDLE_SHORT_VERSION_STRING 1.0
+        XCODE_ATTRIBUTE_SKIP_INSTALL "Yes"
+  )
 endif()
 
 # Build CMake executable

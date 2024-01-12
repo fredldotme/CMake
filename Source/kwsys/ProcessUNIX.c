@@ -52,13 +52,6 @@ do.
 #  include <limits.h> /* OPEN_MAX */
 #  define FD_SETSIZE OPEN_MAX
 #  include <TargetConditionals.h>
-#  ifdef TARGET_OS_IPHONE
-#    include <sys/types.h>
-     extern pid_t ios_fork(void);
-#    define fork ios_fork
-     extern void ios_waitpid(pid_t pid);
-     extern int ios_system(const char* inputCmd);
-#  endif
 #endif
 
 #include <assert.h>    /* assert */
@@ -77,6 +70,17 @@ do.
 #include <sys/wait.h>  /* waitpid */
 #include <time.h>      /* gettimeofday */
 #include <unistd.h>    /* pipe, close, fork, execvp, select, _exit */
+
+#  ifdef TARGET_OS_IPHONE
+#    include <sys/types.h>
+     extern pid_t nosystem_fork(void);
+#    define fork nosystem_fork
+     extern void nosystem_waitpid(pid_t pid);
+     extern int nosystem_execvp(const char *pathname, char *const argv[]);
+     extern __thread FILE* nosystem_stdin;
+     extern __thread FILE* nosystem_stdout;
+     extern __thread FILE* nosystem_stderr;
+#  endif
 
 #if defined(__VMS)
 #  define KWSYSPE_VMS_NONBLOCK , O_NONBLOCK
@@ -1481,7 +1485,7 @@ void kwsysProcess_Kill(kwsysProcess* cp)
       while ((waitpid(cp->ForkPIDs[i], &status, 0) < 0) && (errno == EINTR)) {
       }
 #else
-      ios_waitpid(cp->ForkPIDs[i]);
+      nosystem_waitpid(cp->ForkPIDs[i]);
 #endif
     }
   }
@@ -1626,7 +1630,7 @@ static void kwsysProcessCleanup(kwsysProcess* cp, int error)
                  (errno == EINTR)) {
           }
 #else
-          ios_waitpid(cp->ForkPIDs[i]);
+          nosystem_waitpid(cp->ForkPIDs[i]);
 #endif
         }
       }
@@ -1775,6 +1779,8 @@ static int kwsysProcessCreate(kwsysProcess* cp, int prIndex,
      parent!  TODO: OptionDetach.  Also
      TODO:  CreateProcessGroup.  */
   cp->ForkPIDs[prIndex] = vfork();
+#elif TARGET_OS_IPHONE
+  cp->ForkPIDs[prIndex] = 0;
 #else
   cp->ForkPIDs[prIndex] = kwsysProcessFork(cp, si);
 #endif
@@ -1816,9 +1822,10 @@ static int kwsysProcessCreate(kwsysProcess* cp, int prIndex,
     fcntl(1, F_SETFD, 0);
     fcntl(2, F_SETFD, 0);
 
+#if !TARGET_OS_IPHONE
     /* Restore all default signal handlers. */
     kwsysProcessRestoreDefaultSignalHandlers();
-
+#endif
     /* Now that we have restored default signal handling and created the
        process group, restore mask.  */
     sigprocmask(SIG_SETMASK, &old_mask, 0);
@@ -1841,16 +1848,37 @@ static int kwsysProcessCreate(kwsysProcess* cp, int prIndex,
     /* Failure.  Report error to parent and terminate.  */
     kwsysProcessChildErrorExit(si->ErrorPipe[1]);
 #else
-    const int cmdSize = sizeof(cp->Commands[prIndex])/sizeof(*cp->Commands[prIndex]);
-    char* actualCommands = (char*)malloc(ARG_MAX);
-    memset(actualCommands, '\0', ARG_MAX);
-    for (int i = 0; i < cmdSize; i++) {
-      memset(actualCommands + i, (int)' ', 1);
-      strcpy(actualCommands + i + 1, cp->Commands[prIndex][i]);
-    }
-    printf("RUN: %s\n", actualCommands);
-    ios_system(actualCommands);
-    free(actualCommands);
+      FILE* bak1 = nosystem_stdout;
+      FILE* bak2 = nosystem_stderr;
+    
+      FILE* outWriteEnd = NULL;
+      FILE* errWriteEnd = NULL;
+
+      FILE* outReadEnd = NULL;
+      FILE* errReadEnd = NULL;
+
+      int fdOut[2] = {0};
+      int fdErr[2] = {0};
+
+      pipe(fdOut);
+      outReadEnd = fdopen(fdOut[0], "r");
+      outWriteEnd = fdopen(fdOut[1], "w");
+
+      pipe(fdErr);
+      errReadEnd = fdopen(fdErr[0], "r");
+      errWriteEnd = fdopen(fdErr[1], "w");
+
+      nosystem_stdout = outWriteEnd;
+      nosystem_stderr = errWriteEnd;
+      
+      cp->PipeReadEnds[KWSYSPE_PIPE_STDOUT] = fileno(outReadEnd);
+      cp->PipeReadEnds[KWSYSPE_PIPE_STDERR] = fileno(errReadEnd);
+      
+      nosystem_execvp(cp->Commands[prIndex][0], cp->Commands[prIndex]);
+      cp->State = kwsysProcess_State_Exited;
+
+      nosystem_stdout = bak1;
+      nosystem_stderr = bak2;
 #endif
   }
 
@@ -1940,7 +1968,7 @@ static void kwsysProcessDestroy(kwsysProcess* cp)
              (errno == EINTR)) {
       }
 #else
-      ios_waitpid(cp->ForkPIDs[i]);
+      nosystem_waitpid(cp->ForkPIDs[i]);
       result = 1;
 #endif
       if (result > 0) {
@@ -2524,7 +2552,7 @@ static pid_t kwsysProcessFork(kwsysProcess* cp,
     while ((waitpid(middle_pid, &status, 0) < 0) && (errno == EINTR)) {
     }
 #else
-    ios_waitpid(middle_pid);
+    nosystem_waitpid(middle_pid);
 #endif
     return child_pid;
   }

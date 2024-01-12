@@ -69,6 +69,15 @@
 #  include "cmQtAutoGenGlobalInitializer.h"
 #endif
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
+extern "C" {
+extern int nosystem_executable(const char* cmd);
+}
+#endif
+#endif
+
 const std::string kCMAKE_PLATFORM_INFO_INITIALIZED =
   "CMAKE_PLATFORM_INFO_INITIALIZED";
 
@@ -847,6 +856,7 @@ void cmGlobalGenerator::EnableLanguage(
     std::string compilerEnv = cmStrCat("CMAKE_", lang, "_COMPILER_ENV_VAR");
     std::ostringstream noCompiler;
     cmValue compilerFile = mf->GetDefinition(compilerName);
+#ifndef TARGET_OS_IPHONE
     if (!cmNonempty(compilerFile) || cmIsNOTFOUND(*compilerFile)) {
       /* clang-format off */
       noCompiler <<
@@ -873,6 +883,7 @@ void cmGlobalGenerator::EnableLanguage(
         /* clang-format on */
       }
     }
+#endif
     if (!noCompiler.str().empty()) {
       // Skip testing this language since the compiler is not found.
       needTestLanguage[lang] = false;

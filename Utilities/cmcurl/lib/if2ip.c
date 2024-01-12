@@ -177,7 +177,7 @@ if2ip_result_t Curl_if2ip(int af,
   return res;
 }
 
-#elif defined(HAVE_IOCTL_SIOCGIFADDR)
+#elif defined(HAVE_IOCTL_SIOCGIFADDR) && !TARGET_OS_IPHONE
 
 if2ip_result_t Curl_if2ip(int af,
 #ifdef ENABLE_IPV6

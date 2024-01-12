@@ -26,6 +26,23 @@
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
 
+#ifdef __APPLE__
+#  include <TargetConditionals.h>
+#  ifdef TARGET_OS_IPHONE
+#    include <sys/types.h>
+#    include <fcntl.h>
+extern "C" {
+extern pid_t nosystem_fork(void);
+#    define fork nosystem_fork
+extern void nosystem_waitpid(pid_t pid);
+extern int nosystem_execvp(const char *pathname, char *const argv[]);
+extern __thread FILE* nosystem_stdin;
+extern __thread FILE* nosystem_stdout;
+extern __thread FILE* nosystem_stderr;
+}
+#  endif
+#endif
+
 namespace {
 bool cmExecuteProcessCommandIsWhitespace(char c)
 {
@@ -141,6 +158,11 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
       return false;
     }
   }
+    
+  std::vector<char> tempOutput;
+  std::vector<char> tempError;
+    
+#if !TARGET_OS_IPHONE
   // Create a process instance.
   std::unique_ptr<cmsysProcess, void (*)(cmsysProcess*)> cp_ptr(
     cmsysProcess_New(), cmsysProcess_Delete);
@@ -243,9 +265,7 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
   cmsysProcess_Execute(cp);
 
   // Read the process output.
-  std::vector<char> tempOutput;
-  std::vector<char> tempError;
-  int length;
+  int length = 0;
   char* data;
   int p;
   cmProcessOutput processOutput(
@@ -285,7 +305,77 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
       cmSystemTools::Stderr(strdata);
     }
   }
+#else
+    
+    // Set the command sequence.
+    for (std::vector<std::string> const& cmd : arguments.Commands) {
+        std::vector<const char*> argv(cmd.size() + 1);
+        std::transform(cmd.begin(), cmd.end(), argv.begin(),
+                       [](std::string const& s) { return s.c_str(); });
 
+        FILE* bak1 = nosystem_stdout;
+        FILE* bak2 = nosystem_stderr;
+        
+        FILE* outWriteEnd = NULL;
+        FILE* errWriteEnd = NULL;
+        
+        FILE* outReadEnd = NULL;
+        FILE* errReadEnd = NULL;
+        
+        int fdOut[2] = {0};
+        int fdErr[2] = {0};
+        
+        pipe(fdOut);
+        outReadEnd = fdopen(fdOut[0], "r");
+        outWriteEnd = fdopen(fdOut[1], "w");
+        
+        pipe(fdErr);
+        errReadEnd = fdopen(fdErr[0], "r");
+        errWriteEnd = fdopen(fdErr[1], "w");
+
+        fcntl(fileno(outReadEnd), F_SETFL, fcntl(fileno(outReadEnd), F_GETFL) | O_NONBLOCK);
+        fcntl(fileno(errReadEnd), F_SETFL, fcntl(fileno(errReadEnd), F_GETFL) | O_NONBLOCK);
+
+        nosystem_stdout = outWriteEnd;
+        nosystem_stderr = errWriteEnd;
+        
+        tempOutput.resize(4096);
+        tempError.resize(4096);
+        
+        std::vector<std::string> res;
+
+        char cwd[PATH_MAX];
+        getcwd(cwd, sizeof(cwd));
+        signal(SIGPIPE, SIG_IGN);
+        const int ret = nosystem_execvp(argv.data()[0], (char *const *)argv.data());
+        signal(SIGPIPE, SIG_IGN);
+        chdir(cwd);
+
+        read(fileno(outReadEnd), tempOutput.data(), tempOutput.size()); /* there was data to read */
+        read(fileno(errReadEnd), tempError.data(), tempError.size()); /* there was data to read */
+
+        // Fix the text in the output strings.
+        cmExecuteProcessCommandFixText(tempOutput,
+                                       arguments.OutputStripTrailingWhitespace);
+        cmExecuteProcessCommandFixText(tempError,
+                                       arguments.ErrorStripTrailingWhitespace);
+
+        res.push_back(std::to_string(ret));
+        status.GetMakefile().AddDefinition(arguments.ResultsVariable,
+                                           cmJoin(res, ";"));
+        status.GetMakefile().AddDefinition(arguments.OutputVariable,
+                                           tempOutput.data());
+        status.GetMakefile().AddDefinition(arguments.ErrorVariable,
+                                           tempError.data());
+        status.GetMakefile().AddDefinition(arguments.ResultVariable,
+                                           std::string("").c_str());
+        
+        nosystem_stdout = bak1;
+        nosystem_stderr = bak2;
+    }
+#endif
+
+#if !TARGET_OS_IPHONE
   // All output has been read.  Wait for the process to exit.
   cmsysProcess_WaitForExit(cp, nullptr);
   processOutput.DecodeText(tempOutput, tempOutput);
@@ -470,6 +560,7 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
       return false;
     }
   }
+#endif
 
   return true;
 }

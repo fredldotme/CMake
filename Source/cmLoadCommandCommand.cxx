@@ -258,13 +258,16 @@ bool cmLoadCommandCommand(std::vector<std::string> const& args,
 
   // find the init function
   std::string initFuncName = args[0] + "Init";
-  CM_INIT_FUNCTION initFunction = reinterpret_cast<CM_INIT_FUNCTION>(
+  CM_INIT_FUNCTION initFunction = nullptr;
+#ifndef IOS
+  initFunction = reinterpret_cast<CM_INIT_FUNCTION>(
     cmsys::DynamicLoader::GetSymbolAddress(lib, initFuncName));
   if (!initFunction) {
     initFuncName = cmStrCat('_', args[0], "Init");
     initFunction = reinterpret_cast<CM_INIT_FUNCTION>(
       cmsys::DynamicLoader::GetSymbolAddress(lib, initFuncName));
   }
+#endif
   // if the symbol is found call it to set the name on the
   // function blocker
   if (initFunction) {

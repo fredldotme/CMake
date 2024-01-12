@@ -101,7 +101,7 @@ if (APPLE)
 
   if(IOS)
     set(IOS_SYSTEM_FRAMEWORK "/Users/alfredneumayer/Projects/open/Tide/3rdparty/llvm/build-iphoneos/build/Release-iphoneos" CACHE STRING "Path containing ios_system.framework")
-    find_library(IOS_SYSTEM REQUIRED NAMES ios_system PATHS ${IOS_SYSTEM_FRAMEWORK} CMAKE_FIND_ROOT_PATH_BOTH)
+    find_library(IOS_SYSTEM REQUIRED NAMES nosystem PATHS ${IOS_SYSTEM_FRAMEWORK} CMAKE_FIND_ROOT_PATH_BOTH)
   endif()
 endif ()
 

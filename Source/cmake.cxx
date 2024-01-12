@@ -140,6 +140,20 @@
 #  endif
 #  include <sys/resource.h>
 #  include <sys/time.h>
+#  ifdef TARGET_OS_IPHONE
+#    include <sys/types.h>
+#    include <stdio.h>
+#    undef stdin
+#    undef stdout
+#    undef stderr
+     extern __thread FILE* nosystem_stdin;
+     extern __thread FILE* nosystem_stdout;
+     extern __thread FILE* nosystem_stderr;
+#    define stdin nosystem_stdin
+#    define stdout nosystem_stdout
+#    define stderr nosystem_stderr
+#  endif
+
 #endif
 
 namespace {

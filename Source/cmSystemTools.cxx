@@ -102,8 +102,29 @@
 
 #if defined(__APPLE__)
 #  include <mach-o/dyld.h>
+#  include <TargetConditionals.h>
+#  ifdef TARGET_OS_IPHONE
+#    undef STDIN_FILENO
+#    undef STDOUT_FILENO
+#    undef STDERR_FILENO
+#    undef stdin
+#    undef stdout
+#    undef stderr
+extern "C" {
+extern __thread FILE* nosystem_stdin;
+extern __thread FILE* nosystem_stdout;
+extern __thread FILE* nosystem_stderr;
+extern int nosystem_system(const char* cmd);
+extern int nosystem_execvp(const char *pathname, char *const argv[]);
+};
+#    define stdin nosystem_stdin
+#    define stdout nosystem_stdout
+#    define stderr nosystem_stderr
+#    define STDIN_FILENO fileno(stdin)
+#    define STDOUT_FILENO fileno(stdout)
+#    define STDERR_FILENO fileno(stderr)
+#  endif
 #endif
-
 #ifdef __QNX__
 #  include <malloc.h> /* for malloc/free on QNX */
 #endif
@@ -582,6 +603,7 @@ bool cmSystemTools::RunSingleCommand(std::vector<std::string> const& command,
   }
   argv.push_back(nullptr);
 
+#if !TARGET_OS_IPHONE
   cmsysProcess* cp = cmsysProcess_New();
   cmsysProcess_SetCommand(cp, argv.data());
   cmsysProcess_SetWorkingDirectory(cp, dir);
@@ -708,6 +730,79 @@ bool cmSystemTools::RunSingleCommand(std::vector<std::string> const& command,
 
   cmsysProcess_Delete(cp);
   return result;
+#else
+    std::vector<char> tempOutput;
+    std::vector<char> tempError;
+    
+    FILE* bak1 = nosystem_stdout;
+    FILE* bak2 = nosystem_stderr;
+    
+    FILE* outWriteEnd = NULL;
+    FILE* errWriteEnd = NULL;
+    
+    FILE* outReadEnd = NULL;
+    FILE* errReadEnd = NULL;
+    
+    int fdOut[2] = {0};
+    int fdErr[2] = {0};
+    
+    pipe(fdOut);
+    outReadEnd = fdopen(fdOut[0], "r");
+    outWriteEnd = fdopen(fdOut[1], "w");
+    
+    pipe(fdErr);
+    errReadEnd = fdopen(fdErr[0], "r");
+    errWriteEnd = fdopen(fdErr[1], "w");
+
+    fcntl(fileno(outReadEnd), F_SETFL, fcntl(fileno(outReadEnd), F_GETFL) | O_NONBLOCK);
+    fcntl(fileno(errReadEnd), F_SETFL, fcntl(fileno(errReadEnd), F_GETFL) | O_NONBLOCK);
+
+    nosystem_stdout = outWriteEnd;
+    nosystem_stderr = errWriteEnd;
+    
+    tempOutput.resize(4096);
+    tempError.resize(4096);
+    
+    std::vector<std::string> res;
+    
+    std::string syscmd;
+    for (const auto arg : argv) {
+        if (arg) {
+            syscmd += std::string(arg) + std::string(" ");
+        }
+    }
+
+    char cwd[PATH_MAX];
+    getcwd(cwd, sizeof(cwd));
+    if (dir) {
+        chdir(dir);
+    }
+    const int ret = nosystem_system(syscmd.c_str());
+    chdir(cwd);
+    fflush(outWriteEnd);
+    fflush(errWriteEnd);
+
+    const int nout = read(fileno(outReadEnd), tempOutput.data(), tempOutput.size());
+    tempOutput.resize(std::max(nout, 0));
+    const int nerr = read(fileno(errReadEnd), tempError.data(), tempError.size());
+    tempError.resize(std::max(nerr, 0));
+    
+    if (captureStdOut)
+        captureStdOut->assign(tempOutput.begin(), tempOutput.end());
+    if (captureStdErr)
+        captureStdErr->assign(tempError.begin(), tempError.end());
+    if (retVal)
+        *retVal = ret;
+    nosystem_stdout = bak1;
+    nosystem_stderr = bak2;
+    
+    fclose(outReadEnd);
+    fclose(errReadEnd);
+    fclose(outWriteEnd);
+    fclose(errWriteEnd);
+
+    return true;
+#endif
 }
 
 bool cmSystemTools::RunSingleCommand(const std::string& command,
@@ -2580,6 +2675,7 @@ void cmSystemTools::FindCMakeResources(const char* argv0)
   uint32_t exe_path_size = CM_EXE_PATH_LOCAL_SIZE;
 #  endif
 #  undef CM_EXE_PATH_LOCAL_SIZE
+#if !TARGET_OS_IPHONE
   char* exe_path = exe_path_local;
   if (_NSGetExecutablePath(exe_path, &exe_path_size) < 0) {
     exe_path = static_cast<char*>(malloc(exe_path_size));
@@ -2602,6 +2698,7 @@ void cmSystemTools::FindCMakeResources(const char* argv0)
       exe_dir = cmSystemTools::GetFilenamePath(exe_dir);
     }
   }
+#endif
 #else
   std::string errorMsg;
   std::string exe;

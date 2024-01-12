@@ -2071,6 +2071,10 @@ IF(APPLE)
   LIST(APPEND ADDITIONAL_LIBS "-framework CoreServices")
 ENDIF(APPLE)
 
+IF(IOS)
+  SET(HAVE_OPENAT 0)
+ENDIF(IOS)
+
 add_subdirectory(libarchive)
 IF(0) # CMake does not build libarchive's command-line tools.
 add_subdirectory(cat)

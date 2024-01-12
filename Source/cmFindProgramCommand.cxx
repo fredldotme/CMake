@@ -21,7 +21,7 @@ class cmExecutionStatus;
 #  include <CoreFoundation/CoreFoundation.h>
 #  ifdef TARGET_OS_IPHONE
      extern "C" {
-       extern int ios_executable(const char* inputCmd); 
+       extern int nosystem_executable(const char* inputCmd); 
      }
 #  endif
 #endif
@@ -232,7 +232,7 @@ std::string cmFindProgramCommand::FindProgram()
   }
 #else
   for (std::string const& name : this->Names) {
-    if(ios_executable(name.c_str())) {
+    if(nosystem_executable(name.c_str())) {
       program = name;
       break;
     }

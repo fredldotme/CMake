@@ -1037,7 +1037,11 @@ int do_open(int ac, char const* const* av)
 }
 } // namespace
 
+#ifdef IOS
+int cmake_main(int ac, char const* const* av)
+#else
 int main(int ac, char const* const* av)
+#endif
 {
   cmSystemTools::EnsureStdPipes();
 

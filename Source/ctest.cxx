@@ -160,7 +160,11 @@ const cmDocumentationEntry cmDocumentationOptions[74] = {
 } // anonymous namespace
 
 // this is a test driver program for cmCTest.
+#ifdef IOS
+int ctest_main(int argc, char const* const* argv)
+#else
 int main(int argc, char const* const* argv)
+#endif
 {
   cmSystemTools::EnsureStdPipes();
 

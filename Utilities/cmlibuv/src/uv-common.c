@@ -774,8 +774,8 @@ int uv_loop_configure(uv_loop_t* loop, uv_loop_option option, ...) {
 }
 
 
-static uv_loop_t default_loop_struct;
-static uv_loop_t* default_loop_ptr;
+__thread uv_loop_t default_loop_struct;
+__thread uv_loop_t* default_loop_ptr;
 
 
 uv_loop_t* uv_default_loop(void) {

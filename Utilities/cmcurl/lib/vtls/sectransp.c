@@ -38,6 +38,10 @@
 #include "x509asn1.h"
 #include "strerror.h"
 
+#if __APPLE__
+uint32_t arc4random(void);
+#endif
+
 #ifdef USE_SECTRANSP
 
 #ifdef __clang__
@@ -3261,6 +3265,8 @@ static bool sectransp_data_pending(struct Curl_cfilter *cf,
   else
     return false;
 }
+
+#include <stdlib.h>
 
 static CURLcode sectransp_random(struct Curl_easy *data UNUSED_PARAM,
                                  unsigned char *entropy, size_t length)
