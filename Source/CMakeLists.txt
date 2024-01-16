@@ -1191,7 +1191,7 @@ endif()
 configure_file(CPack/cmCPackConfigure.h.in CPack/cmCPackConfigure.h)
 
 
-if(NOT ${IOS} MATCHES "1")
+if(NOT IOS)
   # Build CMake executable
   add_executable(cmake cmakemain.cxx cmcmd.cxx cmcmd.h)
 
